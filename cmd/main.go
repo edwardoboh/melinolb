@@ -4,24 +4,23 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"time"
-
-	lib "github.com/edwardoboh/melinoLB/internal"
 )
-
-func testing(res http.ResponseWriter, req *http.Request) {
-	lib.LogRequest(req)
-	res.Write([]byte("Hello from the function"))
-}
-func testing2(res http.ResponseWriter, req *http.Request) {
-	lib.LogRequest(req)
-	res.Write([]byte("Hello from testing 2"))
-}
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", testing)
-	mux.HandleFunc("/bat", testing2)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		err, routeUrl := DefaultRouter.FindRoute("/")
+		if err != nil {
+			fmt.Println(err.Error())
+			http.NotFound(w, r)
+			return
+		}
+
+		revProxy := httputil.NewSingleHostReverseProxy(&routeUrl)
+		revProxy.ServeHTTP(w, r)
+	})
 
 	s := &http.Server{
 		Addr:         ":80",
@@ -30,6 +29,6 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	fmt.Println("Server starting on port 80")
+	fmt.Printf("Load Balancer Listening on Port: %d", PORT)
 	log.Fatal(s.ListenAndServe())
 }
