@@ -5,8 +5,19 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"time"
 )
+
+func init() {
+	DefaultRouter = NewRouter()
+	servePool := NewServePool()
+	servePool.RegisterBackend([]url.URL{
+		{Scheme: "http", Host: "localhost:8080", Path: "/"},
+		{Scheme: "http", Host: "localhost:8081", Path: "/"},
+	})
+	DefaultRouter.AddRoute("/", servePool)
+}
 
 func main() {
 	mux := http.NewServeMux()

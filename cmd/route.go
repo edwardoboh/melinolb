@@ -9,14 +9,7 @@ import (
 
 const PORT = 80
 
-var (
-	DefaultRouter *Router
-)
-
-func init() {
-	DefaultRouter = NewRouter()
-	DefaultRouter.AddRoute("/", []url.URL{})
-}
+var DefaultRouter *Router
 
 // SECTION - ServerPool
 type ServerPool struct {
@@ -66,16 +59,18 @@ func (r *Router) FindRoute(path string) (error, url.URL) {
 	return nil, sPool.NextBackend()
 }
 
-func (r *Router) AddRoute(path string, paths []url.URL) error {
+func (r *Router) AddRoute(path string, pool *ServerPool) error {
 	r.s.Lock()
 	defer r.s.Unlock()
 	if route := r.routes[path]; route != nil {
 		return errors.New("path already exist. append routes instead or use a different name")
 	}
 
-	newPool := NewServePool()
-	newPool.RegisterBackend(paths)
-	r.routes[path] = NewServePool()
+	if pool == nil {
+		pool = NewServePool()
+	}
+
+	r.routes[path] = pool
 	return nil
 }
 
