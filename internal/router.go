@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"errors"
@@ -6,8 +6,6 @@ import (
 	"slices"
 	"sync"
 )
-
-const PORT = 80
 
 var DefaultRouter *Router
 
