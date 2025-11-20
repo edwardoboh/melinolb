@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,15 +12,19 @@ import (
 
 func init() {
 	DefaultRouter = NewRouter()
-	servePool := NewServePool()
-	servePool.RegisterBackend([]url.URL{
+	serverPool := NewServerPool()
+	serverPool.RegisterBackend([]url.URL{
 		{Scheme: "http", Host: "localhost:8080", Path: "/"},
 		{Scheme: "http", Host: "localhost:8081", Path: "/"},
 	})
-	DefaultRouter.AddRoute("/", servePool)
+	DefaultRouter.AddRoute("/", serverPool)
 }
 
 func main() {
+	// Start health check background job
+	StartJob(context.Background())
+
+	// Start main application server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		err, routeUrl := DefaultRouter.FindRoute("/")

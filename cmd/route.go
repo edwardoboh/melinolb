@@ -13,13 +13,15 @@ var DefaultRouter *Router
 
 // SECTION - ServerPool
 type ServerPool struct {
-	backends []url.URL
-	current  int
-	s        sync.RWMutex
+	enabled        []url.URL
+	backends       []url.URL
+	healthEndpoint string
+	current        int
+	s              sync.RWMutex
 }
 
-func NewServePool() *ServerPool {
-	return &ServerPool{backends: []url.URL{}, current: 0}
+func NewServerPool() *ServerPool {
+	return &ServerPool{enabled: []url.URL{}, backends: []url.URL{}, healthEndpoint: "/", current: 0}
 }
 
 func (pool *ServerPool) NextBackend() url.URL {
@@ -32,12 +34,19 @@ func (pool *ServerPool) NextBackend() url.URL {
 func (pool *ServerPool) RegisterBackend(urls []url.URL) {
 	pool.s.Lock()
 	defer pool.s.Unlock()
-	pool.backends = append(pool.backends, urls...)
-	pool.backends = slices.Compact(pool.backends)
+	pool.enabled = append(pool.enabled, urls...)
+	pool.enabled = slices.Compact(pool.enabled)
+	pool.backends = pool.enabled
 }
 
 func (pool *ServerPool) Deregister(urls []url.URL) error {
 	return nil
+}
+
+func (pool *ServerPool) ConfigureHealthCheck(path string) {
+	pool.s.Lock()
+	defer pool.s.Unlock()
+	pool.healthEndpoint = "/"
 }
 
 // SECTION - Router
@@ -67,7 +76,7 @@ func (r *Router) AddRoute(path string, pool *ServerPool) error {
 	}
 
 	if pool == nil {
-		pool = NewServePool()
+		pool = NewServerPool()
 	}
 
 	r.routes[path] = pool
