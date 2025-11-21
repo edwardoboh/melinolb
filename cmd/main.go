@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	lib "github.com/edwardoboh/melinoLB/internal"
+	lib "github.com/edwardoboh/melinolb/internal"
 )
 
 func init() {

@@ -6,9 +6,9 @@ before:
     - go test ./...
 
 builds:
-  - id: melinoLB
+  - id: melinolb
     main: ./cmd
-    binary: melinoLB
+    binary: melinolb
     env:
       - CGO_ENABLED=0
     goos:
@@ -45,4 +45,4 @@ changelog:
 release:
   github:
     owner: edwardoboh
-    name: melinoLB
+    name: melinolb
