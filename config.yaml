@@ -1,0 +1,82 @@
+# example config.yaml
+service:
+  name: "edge-proxy"
+  env: "production"
+  listen: "0.0.0.0:4000"
+
+tls:
+  enabled: false           # true if proxy terminates TLS
+  cert_path: ""            # used only if enabled
+  key_path: ""
+
+logging:
+  level: debug              # debug | info | warn | error
+  access_log: "-"          # "-" => stdout, or path to file
+
+admin:
+  enabled: true
+  listen: "127.0.0.1:9000"
+  health_endpoint: "/healthz"
+  metrics_endpoint: "/metrics"
+
+defaults:
+  read_timeout: 30s        # per incoming request
+  write_timeout: 30s
+  backend_connect_timeout: 3s   # in seconds
+  backend_read_timeout: 10s
+  connection_keep_alive: 30s
+  retry_on_5xx: false
+  max_retries: 2
+
+backends:
+  # simple named backend pools (optional — you can also inline below)
+  users:
+    - "http://10.0.1.11:3001"
+    - "http://10.0.1.12:3001"
+  orders:
+    - "http://localhost:8081"
+    - "http://localhost:8082"
+  # orders:
+  #   - "http://10.0.2.21:4001"
+  #   - "http://10.0.2.22:4001"
+
+routes:
+  # route matches are checked top -> bottom; first match wins
+  - id: "users"
+    match:
+      host: "api.example.com"     # optional
+      path: "/api/users"          # prefix match
+      methods: ["GET","POST"]     # optional
+    backend: "users"              # name from backends OR list of URLs inline
+    lb: "round-robin"             # round-robin | least-connections | ip-hash
+    sticky:
+      enabled: false
+      cookie_name: "EDGEID"
+      ttl: 3600
+    health:
+      path: "/healthz"
+      interval: 10s
+      timeout: 2s
+
+  - id: "orders"
+    match:
+      host: "localhost:4000"
+      path: "/api/orders"         # supports prefix
+    backend:
+      - "http://10.0.2.21:4001"
+      - "http://10.0.2.22:4001"
+    lb: "least-connections"
+    retry:
+      enabled: true
+      max_retries: 1
+      per_try_timeout: 3s
+    rate_limit:
+      enabled: true
+      requests_per_second: 10
+      burst: 20
+
+  - id: "default"
+    match:
+      path: "/"                   # fallback
+    backend: "http://127.0.0.1:5000"
+    lb: "round-robin"
