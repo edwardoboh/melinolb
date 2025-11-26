@@ -1,0 +1,61 @@
+# High-Traffic Configuration
+# Optimized for handling large request volumes
+
+service:
+  name: "edge-proxy"
+  env: "production"
+  listen: "0.0.0.0:443"
+
+tls:
+  enabled: true
+  cert_path: "/etc/ssl/certs/cert.pem"
+  key_path: "/etc/ssl/private/key.pem"
+
+logging:
+  level: warn  # Minimal logging to reduce overhead
+  access_log: "/var/log/proxy/access.log"
+
+admin:
+  enabled: true
+  listen: "127.0.0.1:9000"
+  health_endpoint: "/healthz"
+  metrics_endpoint: "/metrics"
+
+defaults:
+  read_timeout: 20s
+  write_timeout: 20s
+  backend_connect_timeout: 2s
+  backend_read_timeout: 8s
+  retry_on_5xx: true
+  max_retries: 1
+
+backends:
+  api_pool:
+    - "http://10.0.1.11:8000"
+    - "http://10.0.1.12:8000"
+    - "http://10.0.1.13:8000"
+    - "http://10.0.1.14:8000"
+    - "http://10.0.1.15:8000"
+    - "http://10.0.1.16:8000"
+    - "http://10.0.1.17:8000"
+    - "http://10.0.1.18:8000"
+
+routes:
+  - id: "api"
+    match:
+      host: "api.example.com"
+      path: "/"
+    backend: "api_pool"
+    lb: "least-connections"  # Adapts to varying load
+    health:
+      path: "/_health"
+      interval: 5s
+      timeout: 1s
+    rate_limit:
+      enabled: true
+      requests_per_second: 5000
+      burst: 10000
+    retry:
+      enabled: true
+      max_retries: 1
+      per_try_timeout: 3s

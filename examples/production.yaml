@@ -1,0 +1,56 @@
+# Production Configuration
+# Battle-tested setup for production environments
+
+service:
+  name: "production-lb"
+  env: "production"
+  listen: "0.0.0.0:443"
+
+tls:
+  enabled: true
+  cert_path: "/etc/ssl/certs/server.crt"
+  key_path: "/etc/ssl/private/server.key"
+
+logging:
+  level: warn  # Minimal logging for production
+  access_log: "/var/log/loadbalancer/access.log"
+
+admin:
+  enabled: true
+  listen: "127.0.0.1:9000"  # Localhost only for security
+  health_endpoint: "/healthz"
+  metrics_endpoint: "/metrics"
+
+defaults:
+  read_timeout: 30s
+  write_timeout: 30s
+  backend_connect_timeout: 3s
+  backend_read_timeout: 10s
+  retry_on_5xx: true
+  max_retries: 2
+
+backends:
+  api:
+    - "http://10.0.1.11:8080"
+    - "http://10.0.1.12:8080"
+    - "http://10.0.1.13:8080"
+
+routes:
+  - id: "api"
+    match:
+      host: "api.example.com"
+      path: "/"
+    backend: "api"
+    lb: "least-connections"
+    health:
+      path: "/health"
+      interval: 10s
+      timeout: 2s
+    rate_limit:
+      enabled: true
+      requests_per_second: 1000
+      burst: 2000
+    retry:
+      enabled: true
+      max_retries: 2
+      per_try_timeout: 5s

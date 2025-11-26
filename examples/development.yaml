@@ -1,0 +1,56 @@
+# Development Configuration
+# For local development with multiple services
+
+service:
+  name: "dev-proxy"
+  env: "development"
+  listen: "127.0.0.1:8080"
+
+logging:
+  level: debug  # Verbose logging for development
+  access_log: "-"
+
+admin:
+  enabled: true
+  listen: "127.0.0.1:9000"
+  health_endpoint: "/healthz"
+  metrics_endpoint: "/metrics"
+
+defaults:
+  read_timeout: 60s
+  write_timeout: 60s
+  backend_connect_timeout: 10s
+  backend_read_timeout: 30s
+
+backends:
+  frontend:
+    - "http://localhost:5173"  # Vite dev server
+  api:
+    - "http://localhost:3001"
+    - "http://localhost:3002"
+    - "http://localhost:3003"
+  auth:
+    - "http://localhost:4000"
+
+routes:
+  - id: "api"
+    match:
+      path: "/api"
+    backend: "api"
+    lb: "round-robin"
+    health:
+      path: "/health"
+      interval: 5s
+      timeout: 2s
+
+  - id: "auth"
+    match:
+      path: "/auth"
+    backend: "auth"
+    lb: "round-robin"
+
+  - id: "frontend"
+    match:
+      path: "/"
+    backend: "frontend"
+    lb: "round-robin"

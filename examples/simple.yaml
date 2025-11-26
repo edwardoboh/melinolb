@@ -1,0 +1,18 @@
+# Simple Load Balancer Configuration
+# Minimal setup for getting started quickly
+
+service:
+  name: "simple-proxy"
+  env: "development"
+  listen: "0.0.0.0:8080"
+
+logging:
+  level: info
+  access_log: "-"
+
+routes:
+  - id: "default"
+    match:
+      path: "/"
+    backend: "http://localhost:3000"
+    lb: "round-robin"

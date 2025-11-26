@@ -1,0 +1,125 @@
+# Multi-Service API Gateway
+# Route different paths to different backend services
+
+service:
+  name: "api-gateway"
+  env: "production"
+  listen: "0.0.0.0:443"
+
+tls:
+  enabled: true
+  cert_path: "/etc/ssl/certs/wildcard.crt"
+  key_path: "/etc/ssl/private/wildcard.key"
+
+logging:
+  level: info
+  access_log: "/var/log/gateway/access.log"
+
+admin:
+  enabled: true
+  listen: "127.0.0.1:9000"
+  health_endpoint: "/healthz"
+  metrics_endpoint: "/metrics"
+
+defaults:
+  read_timeout: 30s
+  write_timeout: 30s
+  backend_connect_timeout: 5s
+  backend_read_timeout: 15s
+  retry_on_5xx: false
+  max_retries: 1
+
+backends:
+  users:
+    - "http://users-1.internal:3001"
+    - "http://users-2.internal:3001"
+    - "http://users-3.internal:3001"
+  
+  orders:
+    - "http://orders-1.internal:4001"
+    - "http://orders-2.internal:4001"
+  
+  payments:
+    - "http://payments-1.internal:5001"
+  
+  notifications:
+    - "http://notifications-1.internal:6001"
+    - "http://notifications-2.internal:6001"
+  
+  frontend:
+    - "http://frontend-1.internal:8080"
+    - "http://frontend-2.internal:8080"
+
+routes:
+  # User Service
+  - id: "users-api"
+    match:
+      path: "/api/v1/users"
+      methods: ["GET", "POST", "PUT", "DELETE"]
+    backend: "users"
+    lb: "least-connections"
+    health:
+      path: "/health"
+      interval: 10s
+      timeout: 2s
+    rate_limit:
+      enabled: true
+      requests_per_second: 200
+      burst: 400
+
+  # Order Service
+  - id: "orders-api"
+    match:
+      path: "/api/v1/orders"
+    backend: "orders"
+    lb: "round-robin"
+    sticky:
+      enabled: true
+      cookie_name: "ORDER_SESSION"
+      ttl: 1800
+    health:
+      path: "/health"
+      interval: 15s
+      timeout: 3s
+    rate_limit:
+      enabled: true
+      requests_per_second: 100
+      burst: 200
+
+  # Payment Service (stricter limits)
+  - id: "payments-api"
+    match:
+      path: "/api/v1/payments"
+      methods: ["POST"]
+    backend: "payments"
+    lb: "least-connections"
+    health:
+      path: "/health"
+      interval: 5s
+      timeout: 2s
+    rate_limit:
+      enabled: true
+      requests_per_second: 50
+      burst: 100
+
+  # Notification Service
+  - id: "notifications-api"
+    match:
+      path: "/api/v1/notifications"
+    backend: "notifications"
+    lb: "round-robin"
+    health:
+      path: "/health"
+      interval: 20s
+      timeout: 3s
+
+  # Frontend (catch-all)
+  - id: "frontend"
+    match:
+      path: "/"
+    backend: "frontend"
+    lb: "round-robin"
+    health:
+      path: "/health"
+      interval: 30s
+      timeout: 5s
